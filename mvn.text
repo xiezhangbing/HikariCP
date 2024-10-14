@@ -1,0 +1,4 @@
+
+---使用此命令编译，项目使用了toolchains
+mvn clean compile -s "D:\program files\maven\apache-maven-3.6.3\conf\settings.xml" -t "D:\program files\maven\apache-maven-3.6.3\conf\toolchains
+.xml" -Dmaven.test.skip=true
