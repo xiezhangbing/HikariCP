@@ -72,6 +72,9 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
 {
    private final Logger logger = LoggerFactory.getLogger(HikariPool.class);
 
+   /**
+    * pool的状态：正常，暂停，终止
+    */
    public static final int POOL_NORMAL = 0;
    public static final int POOL_SUSPENDED = 1;
    public static final int POOL_SHUTDOWN = 2;
@@ -80,8 +83,9 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
 
    private final long aliveBypassWindowMs = Long.getLong("com.zaxxer.hikari.aliveBypassWindowMs", MILLISECONDS.toMillis(500));
    private final long housekeepingPeriodMs = Long.getLong("com.zaxxer.hikari.housekeeping.periodMs", SECONDS.toMillis(30));
-
+   //连接被驱逐
    private static final String EVICTED_CONNECTION_MESSAGE = "(connection was evicted)";
+   //连接断开
    private static final String DEAD_CONNECTION_MESSAGE = "(connection is dead)";
 
    private final PoolEntryCreator poolEntryCreator = new PoolEntryCreator(null /*logging prefix*/);
@@ -91,7 +95,7 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
    private final ThreadPoolExecutor closeConnectionExecutor;
 
    private final ConcurrentBag<PoolEntry> connectionBag;
-
+   // leak-泄漏
    private final ProxyLeakTaskFactory leakTaskFactory;
    private final SuspendResumeLock suspendResumeLock;
 
@@ -108,6 +112,7 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
       super(config);
 
       this.connectionBag = new ConcurrentBag<>(this);
+      //允许连接池暂停,创建暂停恢复锁
       this.suspendResumeLock = config.isAllowPoolSuspension() ? new SuspendResumeLock() : SuspendResumeLock.FAUX_LOCK;
 
       this.houseKeepingExecutorService = initializeHouseKeepingExecutorService();
@@ -469,6 +474,8 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
    /**
     * Creating new poolEntry.  If maxLifetime is configured, create a future End-of-life task with 2.5% variance from
     * the maxLifetime time to ensure there is no massive die-off of Connections in the pool.
+    * 创建新的 poolEntry。如果配置了 maxLifetime，请创建一个与 maxLifetime 时间相差 2.5% 的未来生命周期结束任务，
+    * 以确保池中没有 Connections 的大规模死亡。
     */
    private PoolEntry createPoolEntry()
    {
@@ -510,6 +517,7 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
 
    /**
     * Fill pool up from current idle connections (as they are perceived at the point of execution) to minimumIdle connections.
+    * 将池从当前空闲连接（在执行时感知到）填充到 minimumIdle 数量 连接
     */
    private synchronized void fillPool()
    {
@@ -558,6 +566,7 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
 
       final long startTime = currentTime();
       do {
+         //如果创建失败会返回null
          final PoolEntry poolEntry = createPoolEntry();
          if (poolEntry != null) {
             if (config.getMinimumIdle() > 0) {

@@ -67,6 +67,7 @@ public class HikariConfig implements HikariConfigMXBean
    private volatile long connectionTimeout;
    private volatile long validationTimeout;
    private volatile long idleTimeout;
+   //泄漏检测阈值
    private volatile long leakDetectionThreshold;
    private volatile long maxLifetime;
    private volatile int maxPoolSize;

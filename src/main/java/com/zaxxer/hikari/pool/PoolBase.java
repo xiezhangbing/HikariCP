@@ -321,7 +321,12 @@ abstract class PoolBase
       final String driverClassName = config.getDriverClassName();
       final String dataSourceJNDI = config.getDataSourceJNDI();
       final Properties dataSourceProperties = config.getDataSourceProperties();
-
+      /**
+       *       创建DataSource ：
+       *       如果config指定了DataSourceClass,就创建一个指定类型的DataSource
+       *       如果config指定了DriverClassName,则创建一个指定DriverClassName类型的DataSource
+       *       如果config指定了dataSourceJNDI,则创建JNDI类型的DataSource
+       */
       DataSource ds = config.getDataSource();
       if (dsClassName != null && ds == null) {
          ds = createInstance(dsClassName, DataSource.class);
@@ -340,6 +345,7 @@ abstract class PoolBase
       }
 
       if (ds != null) {
+         //设置登陆尝试时间
          setLoginTimeout(ds);
          createNetworkTimeoutExecutor(ds, dsClassName, jdbcUrl);
       }
@@ -596,7 +602,7 @@ abstract class PoolBase
 
    private void createNetworkTimeoutExecutor(final DataSource dataSource, final String dsClassName, final String jdbcUrl)
    {
-      // Temporary hack for MySQL issue: http://bugs.mysql.com/bug.php?id=75615
+      // Temporary hack for MySQL issue: http://bugs.mysql.com/bug.php?id=75615 MySQL 的临时 hack
       if ((dsClassName != null && dsClassName.contains("Mysql")) ||
           (jdbcUrl != null && jdbcUrl.contains("mysql")) ||
           (dataSource != null && dataSource.getClass().getName().contains("Mysql"))) {

@@ -111,6 +111,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
    /**
     * The method will borrow a BagEntry from the bag, blocking for the
     * specified timeout if none are available.
+    * 该方法将从 bag 中借用 BagEntry，如果没有可用，则阻塞指定的一定的超时时间
     *
     * @param timeout how long to wait before giving up, in units of unit
     * @param timeUnit a <code>TimeUnit</code> determining how to interpret the timeout parameter
@@ -205,7 +206,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
          LOGGER.info("ConcurrentBag has been closed, ignoring add()");
          throw new IllegalStateException("ConcurrentBag has been closed, ignoring add()");
       }
-
+      //最终被包装在PoolEntry中的Connection 被放到sharedList中，shardList是写-线程安全的
       sharedList.add(bagEntry);
 
       // spin until a thread takes it or none are waiting

@@ -29,6 +29,7 @@
       <h2.version>1.4.196</h2.version>
       <junit.version>4.13.1</junit.version>
       <testcontainers.version>1.15.1</testcontainers.version>
+      <logback.version>1.0.13</logback.version>
    </properties>
 
    <groupId>com.zaxxer</groupId>
@@ -78,6 +79,17 @@
          <groupId>org.slf4j</groupId>
          <artifactId>slf4j-api</artifactId>
          <version>${slf4j.version}</version>
+      </dependency>
+      <!--   添加logback-->
+      <dependency>
+         <groupId>ch.qos.logback</groupId>
+         <artifactId>logback-classic</artifactId>
+         <version>${logback.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>ch.qos.logback</groupId>
+         <artifactId>logback-core</artifactId>
+         <version>${logback.version}</version>
       </dependency>
       <dependency>
          <groupId>org.apache.logging.log4j</groupId>
@@ -239,12 +251,18 @@
          <version>${h2.version}</version>
          <scope>test</scope>
       </dependency>
+      <dependency>
+         <groupId>mysql</groupId>
+         <artifactId>mysql-connector-java</artifactId>
+         <version>5.1.49</version>
+      </dependency>
    </dependencies>
 
    <build>
       <resources>
          <resource>
-            <directory>target/classes</directory>
+<!--            <directory>target/classes</directory>-->
+            <directory>src/main/resources</directory>
          </resource>
       </resources>
 
@@ -332,55 +350,55 @@
             </configuration>
          </plugin>
 
-         <plugin>
-            <!-- The Docker Maven plugin is used to create docker image with the fat jar -->
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-            <version>${docker.maven.plugin.fabric8.version}</version>
-            <configuration>
-               <logDate>default</logDate>
-               <autoPull>true</autoPull>
-               <images>
-                  <!-- Postgres Image is used 'as-is' and iked into the service s linimage -->
-                  <image>
-                     <alias>db</alias>
-                     <name>postgres:11</name>
-                     <run>
-                        <env>
-                           <POSTGRES_PASSWORD>password</POSTGRES_PASSWORD>
-                        </env>
-                        <wait>
-                           <log>database system is ready to accept connections</log>
-                           <time>20000</time>
-                        </wait>
-                        <log>
-                           <prefix>DB</prefix>
-                           <color>yellow</color>
-                        </log>
-                     </run>
-                  </image>
-               </images>
-            </configuration>
+<!--         <plugin>-->
+<!--            &lt;!&ndash; The Docker Maven plugin is used to create docker image with the fat jar &ndash;&gt;-->
+<!--            <groupId>io.fabric8</groupId>-->
+<!--            <artifactId>docker-maven-plugin</artifactId>-->
+<!--            <version>${docker.maven.plugin.fabric8.version}</version>-->
+<!--            <configuration>-->
+<!--               <logDate>default</logDate>-->
+<!--               <autoPull>true</autoPull>-->
+<!--               <images>-->
+<!--                  &lt;!&ndash; Postgres Image is used 'as-is' and iked into the service s linimage &ndash;&gt;-->
+<!--                  <image>-->
+<!--                     <alias>db</alias>-->
+<!--                     <name>postgres:11</name>-->
+<!--                     <run>-->
+<!--                        <env>-->
+<!--                           <POSTGRES_PASSWORD>password</POSTGRES_PASSWORD>-->
+<!--                        </env>-->
+<!--                        <wait>-->
+<!--                           <log>database system is ready to accept connections</log>-->
+<!--                           <time>20000</time>-->
+<!--                        </wait>-->
+<!--                        <log>-->
+<!--                           <prefix>DB</prefix>-->
+<!--                           <color>yellow</color>-->
+<!--                        </log>-->
+<!--                     </run>-->
+<!--                  </image>-->
+<!--               </images>-->
+<!--            </configuration>-->
 
-            <!-- Hooking into the lifecycle -->
-            <executions>
-               <execution>
-                  <id>start</id>
-                  <phase>pre-integration-test</phase>
-                  <goals>
-                     <goal>build</goal>
-                     <goal>start</goal>
-                  </goals>
-               </execution>
-               <execution>
-                  <id>stop</id>
-                  <phase>post-integration-test</phase>
-                  <goals>
-                     <goal>stop</goal>
-                  </goals>
-               </execution>
-            </executions>
-         </plugin>
+<!--            &lt;!&ndash; Hooking into the lifecycle &ndash;&gt;-->
+<!--            <executions>-->
+<!--               <execution>-->
+<!--                  <id>start</id>-->
+<!--                  <phase>pre-integration-test</phase>-->
+<!--                  <goals>-->
+<!--                     <goal>build</goal>-->
+<!--                     <goal>start</goal>-->
+<!--                  </goals>-->
+<!--               </execution>-->
+<!--               <execution>-->
+<!--                  <id>stop</id>-->
+<!--                  <phase>post-integration-test</phase>-->
+<!--                  <goals>-->
+<!--                     <goal>stop</goal>-->
+<!--                  </goals>-->
+<!--               </execution>-->
+<!--            </executions>-->
+<!--         </plugin>-->
 
          <plugin>
             <groupId>org.jacoco</groupId>
