@@ -24,11 +24,13 @@ import java.util.concurrent.Semaphore;
  * This class implements a lock that can be used to suspend and resume the pool.  It
  * also provides a faux implementation that is used when the feature is disabled that
  * hopefully gets fully "optimized away" by the JIT.
+ * 此类实现可用于挂起和恢复池的锁。它还提供了一个在禁用该功能时使用的假实现，希望 JIT 能完全“优化”
  *
  * @author Brett Wooldridge
  */
 public class SuspendResumeLock
 {
+   //假锁
    public static final SuspendResumeLock FAUX_LOCK = new SuspendResumeLock(false) {
       @Override
       public void acquire() {}

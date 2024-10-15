@@ -42,7 +42,14 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
    private static final Logger LOGGER = LoggerFactory.getLogger(HikariDataSource.class);
 
    private final AtomicBoolean isShutdown = new AtomicBoolean();
-
+   /**
+    * fastPathPool 是final的，不允许改变，后续获取连接时有限从fastPathPool中获取，获取不到再创建
+    * pool 时volatile的，主要是为了，在池启动时，避免线程安全问题；
+    * 如果是通过有参构造方法启动的，那fastPathPool就会被赋值
+    * 如果是通过无参构造方法启动的，那fastPathPool就永远为null，后续获取连接就从pool中获取
+    * 而由于pool是volatile修饰的，在读的时候会强制cpu从内存中读取，而忽略了cpu的缓存，效率会降低
+    * 所以官方推荐使用有参构造
+    */
    private final HikariPool fastPathPool;
    private volatile HikariPool pool;
 
@@ -59,10 +66,15 @@ public class HikariDataSource extends HikariConfig implements DataSource, Closea
     * this constructor vs. {@link #HikariDataSource(HikariConfig)} will
     * result in {@link #getConnection()} performance that is slightly lower
     * due to lazy initialization checks.
+    * 默认构造函数。setter 用于配置池。与HikariDataSource（HikariConfig）相比，
+    * 使用此构造函数将导致getConnection（）性能由于延迟初始化检查而略有降低。
+    * 对 getConnection（） 的第一次调用将启动池。
     *
     * The first call to {@link #getConnection()} starts the pool.  Once the pool
     * is started, the configuration is "sealed" and no further configuration
     * changes are possible -- except via {@link HikariConfigMXBean} methods.
+    *
+    * 一旦池启动，配置就会被 “密封” ，并且无法进行进一步的配置更改 —— 除了通过 HikariConfigMXBean 方法
     */
    public HikariDataSource()
    {

@@ -48,7 +48,7 @@ public abstract class ProxyConnection implements Connection
    private static final Logger LOGGER;
    private static final Set<String> ERROR_STATES;
    private static final Set<Integer> ERROR_CODES;
-
+   //PoolEntry.createProxyConnection 将PoolEntry的connection委托给了该变量
    @SuppressWarnings("WeakerAccess")
    protected Connection delegate;
 

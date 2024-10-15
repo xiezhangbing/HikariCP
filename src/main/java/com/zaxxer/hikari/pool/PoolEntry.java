@@ -112,6 +112,7 @@ final class PoolEntry implements IConcurrentBagEntry
       return hikariPool.toString();
    }
 
+   //判断是否被标记移除
    boolean isMarkedEvicted()
    {
       return evict;

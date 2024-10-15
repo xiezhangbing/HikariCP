@@ -112,7 +112,9 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
       super(config);
 
       this.connectionBag = new ConcurrentBag<>(this);
-      //允许连接池暂停,创建暂停恢复锁
+      //允许连接池暂停,即挂起，连接池挂起时，其他所有线程都获取不到连接，这就有利于通过jmx修改一些配置，
+      //然后恢复时就会使用新的配置创建新的连接，根据配置中的AllowPoolSuspension参数来开启挂起功能，确定创建的对象
+      // 开启挂起功能后会创建正常的SuspendResumeLock,否则创建一个FAUX_LOCK（它里面是空实现）
       this.suspendResumeLock = config.isAllowPoolSuspension() ? new SuspendResumeLock() : SuspendResumeLock.FAUX_LOCK;
 
       this.houseKeepingExecutorService = initializeHouseKeepingExecutorService();
@@ -176,24 +178,36 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
     */
    public Connection getConnection(final long hardTimeout) throws SQLException
    {
+      //获取许可，如果获取不到会一直阻塞等待获取
       suspendResumeLock.acquire();
       final long startTime = currentTime();
 
       try {
          long timeout = hardTimeout;
          do {
+            //connection主要存储在connectionBag中的CopyOnWriteArrayList<T> sharedList 中，从其中借一个出来
             PoolEntry poolEntry = connectionBag.borrow(timeout, MILLISECONDS);
+            //只有borrow方法 超时 “timeout” 毫秒 了才会返回null,
             if (poolEntry == null) {
                break; // We timed out... break and throw exception
             }
 
             final long now = currentTime();
+            //poolEntry被标记移除
+            //或者 连接已经不存活 且 上次访问的时间到现在已经超过了aliveBypassWindowMs(默认500ms)
             if (poolEntry.isMarkedEvicted() || (elapsedMillis(poolEntry.lastAccessed, now) > aliveBypassWindowMs && !isConnectionAlive(poolEntry.connection))) {
+               // 满足条件关闭连接
                closeConnection(poolEntry, poolEntry.isMarkedEvicted() ? EVICTED_CONNECTION_MESSAGE : DEAD_CONNECTION_MESSAGE);
                timeout = hardTimeout - elapsedMillis(startTime);
             }
             else {
+               //记录被借出的状态
                metricsTracker.recordBorrowStats(poolEntry, startTime);
+               //创建proxyConnection, poolEntry将内部的connection委托给了proxyConnection,同时创建检测连接泄漏的任务
+               //调用关系PoolEntry.createProxyConnection(...) ==>
+               // ProxyFactory.getProxyConnection(...) ==>
+               // new HikariProxyConnection(...) ==> 它是通过字节码技术生成的class
+               // 最终执行ProxyConnection的构造方法，将connection赋值给delegate(是一个Connection类型的)
                return poolEntry.createProxyConnection(leakTaskFactory.schedule(poolEntry), now);
             }
          } while (timeout > 0L);
@@ -766,6 +780,7 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
 
    /**
     * The house keeping task to retire and maintain minimum idle connections.
+    * houseKeeper 任务：停用并保持最少空闲连接。
     */
    private final class HouseKeeper implements Runnable
    {
@@ -775,7 +790,7 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
       public void run()
       {
          try {
-            // refresh values in case they changed via MBean
+            // refresh values in case they changed via MBean 刷新值，以防它们通过 MBean 更改
             connectionTimeout = config.getConnectionTimeout();
             validationTimeout = config.getValidationTimeout();
             leakTaskFactory.updateLeakDetectionThreshold(config.getLeakDetectionThreshold());
