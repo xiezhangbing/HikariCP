@@ -109,27 +109,28 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
     */
    public HikariPool(final HikariConfig config)
    {
+      //PoolBase
       super(config);
-
+      // 创建一个用于保存链接的bag
       this.connectionBag = new ConcurrentBag<>(this);
       //允许连接池暂停,即挂起，连接池挂起时，其他所有线程都获取不到连接，这就有利于通过jmx修改一些配置，
       //然后恢复时就会使用新的配置创建新的连接，根据配置中的AllowPoolSuspension参数来开启挂起功能，确定创建的对象
       // 开启挂起功能后会创建正常的SuspendResumeLock,否则创建一个FAUX_LOCK（它里面是空实现）
       this.suspendResumeLock = config.isAllowPoolSuspension() ? new SuspendResumeLock() : SuspendResumeLock.FAUX_LOCK;
-
+      // 初始化houseKeepingExecutorService 线程池，采用DiscardPolicy的拒绝策略，只有一个线程，是守护线程，线程
       this.houseKeepingExecutorService = initializeHouseKeepingExecutorService();
 
       checkFailFast();
-
+      //设置监控指标跟踪器工厂
       if (config.getMetricsTrackerFactory() != null) {
          setMetricsTrackerFactory(config.getMetricsTrackerFactory());
       }
       else {
          setMetricRegistry(config.getMetricRegistry());
       }
-
+      //设置健康检查注册器
       setHealthCheckRegistry(config.getHealthCheckRegistry());
-
+      //jmx
       handleMBeans(this, true);
 
       ThreadFactory threadFactory = config.getThreadFactory();
@@ -137,11 +138,13 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
       final int maxPoolSize = config.getMaximumPoolSize();
       LinkedBlockingQueue<Runnable> addConnectionQueue = new LinkedBlockingQueue<>(maxPoolSize);
       this.addConnectionQueueReadOnlyView = unmodifiableCollection(addConnectionQueue);
+      // 给底层添加连接的线程池：采用DiscardOldestPolicy的拒绝策略，只有一个线程，线程最大的任务队列大小为连接池的最大连接数
       this.addConnectionExecutor = createThreadPoolExecutor(addConnectionQueue, poolName + " connection adder", threadFactory, new ThreadPoolExecutor.DiscardOldestPolicy());
+      // 关闭底层了连接的线程池：采用CallerRunsPolicy的拒绝策略，只有一个线程，线程最大的任务队列大小为连接池的最大连接数
       this.closeConnectionExecutor = createThreadPoolExecutor(maxPoolSize, poolName + " connection closer", threadFactory, new ThreadPoolExecutor.CallerRunsPolicy());
-
+      //检测连接泄漏的一个task工厂，内部包装了houseKeeExecutorService线程池
       this.leakTaskFactory = new ProxyLeakTaskFactory(config.getLeakDetectionThreshold(), houseKeepingExecutorService);
-
+      // 100ms后每30秒执行一次，任务的实现内容在 HouseKeeper中
       this.houseKeeperTask = houseKeepingExecutorService.scheduleWithFixedDelay(new HouseKeeper(), 100L, housekeepingPeriodMs, MILLISECONDS);
 
       if (Boolean.getBoolean("com.zaxxer.hikari.blockUntilFilled") && config.getInitializationFailTimeout() > 1) {
@@ -647,6 +650,9 @@ public final class HikariPool extends PoolBase implements HikariPoolMXBean, IBag
     * Create/initialize the Housekeeping service {@link ScheduledExecutorService}.  If the user specified an Executor
     * to be used in the {@link HikariConfig}, then we use that.  If no Executor was specified (typical), then create
     * an Executor and configure it.
+    * 创建/初始化 Housekeeping 服务 ScheduledExecutorService。
+    * 如果用户指定了要在 中使用的 Executor， HikariConfig则我们使用该 Executor。
+    * 如果未指定 Executor（典型），则创建一个 Executor 并对其进行配置
     *
     * @return either the user specified {@link ScheduledExecutorService}, or the one we created
     */
